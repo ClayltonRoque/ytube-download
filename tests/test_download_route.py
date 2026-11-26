@@ -212,6 +212,27 @@ def test_file_endpoint_serves_completed_task_as_attachment(tmp_path):
     )
 
 
+def test_file_endpoint_uses_sanitized_media_title_as_download_name(tmp_path):
+    app = create_test_app(tmp_path)
+    output_file = tmp_path / "completed.mp3"
+    output_file.write_bytes(b"audio data")
+    task = app.extensions["download_task_manager"].create_task(
+        lambda progress_hook: {
+            "filepath": str(output_file),
+            "title": "Café / Música? versão",
+        }
+    )
+    assert task.future is not None
+    task.future.result(timeout=2)
+
+    response = app.test_client().get(f"/api/download/file/{task.id}")
+
+    assert response.status_code == 200
+    assert "filename*=UTF-8''Caf%C3%A9%20M%C3%BAsica%20vers%C3%A3o.mp3" in (
+        response.headers["Content-Disposition"]
+    )
+
+
 def test_file_endpoint_serves_final_extension_when_task_metadata_is_stale(
     tmp_path,
 ):

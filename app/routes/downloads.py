@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.services.downloader import download_audio, download_video
@@ -17,6 +19,7 @@ from app.utils.file_manager import DownloadFileError, resolve_download_file
 
 
 bp = Blueprint("downloads", __name__, url_prefix="/api")
+_INVALID_FILENAME_CHARACTERS = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
 
 
 def _error_response(code, message, status_code):
@@ -29,6 +32,18 @@ def _error_response(code, message, status_code):
             },
         }
     ), status_code
+
+
+def _download_name(download_info, file_path):
+    title = download_info.get("title")
+    if not isinstance(title, str):
+        return file_path.name
+
+    safe_title = _INVALID_FILENAME_CHARACTERS.sub("", title)
+    safe_title = " ".join(safe_title.split()).strip(" .")
+    if not safe_title:
+        return file_path.name
+    return f"{safe_title}{file_path.suffix}"
 
 
 @bp.post("/metadata")
@@ -181,5 +196,5 @@ def download_file(task_id):
     return send_file(
         file_path,
         as_attachment=True,
-        download_name=file_path.name,
+        download_name=_download_name(download_info, file_path),
     )

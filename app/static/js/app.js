@@ -164,6 +164,7 @@ if (form) {
         downloadStatus.textContent = "";
         downloadError.textContent = "";
         downloadError.hidden = true;
+        downloadButton.hidden = false;
         downloadFileLink.hidden = true;
         downloadFileLink.removeAttribute("href");
         progressPanel.hidden = true;
@@ -245,6 +246,7 @@ if (form) {
         setDownloadBusy(false);
 
         if (errorMessage) {
+            downloadButton.hidden = false;
             progressLabel.textContent = "Falhou";
             downloadStatus.textContent = "O download não foi concluído.";
             downloadError.textContent = errorMessage;
@@ -252,6 +254,7 @@ if (form) {
             downloadFileLink.hidden = true;
             downloadFileLink.removeAttribute("href");
         } else {
+            downloadButton.hidden = true;
             downloadStatus.textContent = "Download concluído.";
         }
     }
