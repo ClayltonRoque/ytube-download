@@ -87,6 +87,35 @@ def test_download_audio_extracts_mp3_with_ffmpeg(youtube_dl_class, tmp_path):
 
 
 @patch("app.services.downloader.YoutubeDL")
+def test_download_audio_passes_progress_hook_to_ytdlp(youtube_dl_class, tmp_path):
+    progress_events = []
+    progress_hook = progress_events.append
+    progress_info = {
+        "status": "downloading",
+        "downloaded_bytes": 64,
+        "total_bytes": 128,
+    }
+    youtube_dl = youtube_dl_class.return_value.__enter__.return_value
+
+    def extract_info(*args, **kwargs):
+        options = youtube_dl_class.call_args.args[0]
+        options["progress_hooks"][0](progress_info)
+        return {"id": "AbC123_456-"}
+
+    youtube_dl.extract_info.side_effect = extract_info
+
+    download_audio(
+        VIDEO_URL,
+        tmp_path / "downloads",
+        progress_hook=progress_hook,
+    )
+
+    options = youtube_dl_class.call_args.args[0]
+    assert options["progress_hooks"] == [progress_hook]
+    assert progress_events == [progress_info]
+
+
+@patch("app.services.downloader.YoutubeDL")
 def test_download_audio_uses_selected_format_and_mp3_bitrate(
     youtube_dl_class, tmp_path
 ):

@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 from uuid import UUID
 
 from app import create_app
@@ -45,6 +45,7 @@ def test_download_endpoint_creates_audio_task(download_audio, tmp_path):
         str(tmp_path),
         audio_format="mp3",
         audio_quality=192,
+        progress_hook=ANY,
     )
 
 
@@ -76,6 +77,7 @@ def test_download_endpoint_creates_video_task(download_video, tmp_path):
         str(tmp_path),
         video_format="mp4",
         video_quality=720,
+        progress_hook=ANY,
     )
 
 

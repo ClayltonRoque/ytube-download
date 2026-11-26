@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
@@ -18,10 +18,14 @@ class MediaDownloadError(RuntimeError):
     pass
 
 
+ProgressHook = Callable[[dict[str, Any]], None]
+
+
 def _execute_download(
     url: str,
     download_folder: str | Path,
     media_options: dict[str, Any],
+    progress_hook: ProgressHook | None = None,
 ) -> dict[str, Any]:
     validated_url = validate_youtube_url(url)
     output_folder = Path(download_folder)
@@ -34,6 +38,8 @@ def _execute_download(
         "outtmpl": str(output_folder / "%(id)s.%(ext)s"),
         **media_options,
     }
+    if progress_hook is not None:
+        options["progress_hooks"] = [progress_hook]
 
     try:
         with YoutubeDL(options) as youtube_dl:
@@ -47,11 +53,16 @@ def _execute_download(
     return info
 
 
-def download_media(url: str, download_folder: str | Path) -> dict[str, Any]:
+def download_media(
+    url: str,
+    download_folder: str | Path,
+    progress_hook: ProgressHook | None = None,
+) -> dict[str, Any]:
     return _execute_download(
         url,
         download_folder,
         {"format": "bestvideo*+bestaudio/best"},
+        progress_hook,
     )
 
 
@@ -60,6 +71,7 @@ def download_audio(
     download_folder: str | Path,
     audio_format: str = "mp3",
     audio_quality: int | str | None = None,
+    progress_hook: ProgressHook | None = None,
 ) -> dict[str, Any]:
     audio_format, audio_quality = validate_audio_options(audio_format, audio_quality)
     postprocessor = {
@@ -76,6 +88,7 @@ def download_audio(
             "format": "bestaudio/best",
             "postprocessors": [postprocessor],
         },
+        progress_hook,
     )
 
 
@@ -84,6 +97,7 @@ def download_video(
     download_folder: str | Path,
     video_format: str = "mp4",
     video_quality: int | str | None = None,
+    progress_hook: ProgressHook | None = None,
 ) -> dict[str, Any]:
     video_format = validate_video_format(video_format)
     validated_quality = parse_video_quality(video_quality)
@@ -121,4 +135,5 @@ def download_video(
             "format": format_selector,
             "merge_output_format": video_format,
         },
+        progress_hook,
     )
