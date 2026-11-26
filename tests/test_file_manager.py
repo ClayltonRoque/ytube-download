@@ -29,6 +29,26 @@ def test_resolve_download_file_accepts_relative_filename(tmp_path):
     ) == output_file.resolve()
 
 
+def test_resolve_download_file_falls_back_to_video_id_and_final_extension(
+    tmp_path,
+):
+    download_folder = tmp_path / "downloads"
+    download_folder.mkdir()
+    output_file = download_folder / "AbC123_456-.mp3"
+    output_file.write_bytes(b"audio")
+
+    resolved = resolve_download_file(
+        {
+            "filepath": str(download_folder / "AbC123_456-.webm"),
+            "id": "AbC123_456-",
+            "ext": "mp3",
+        },
+        download_folder,
+    )
+
+    assert resolved == output_file.resolve()
+
+
 @pytest.mark.parametrize(
     "download_info",
     [
@@ -36,6 +56,7 @@ def test_resolve_download_file_accepts_relative_filename(tmp_path):
         {"filepath": "../outside.mp4"},
         {"filepath": "missing.mp4"},
         {"filepath": 123},
+        {"id": "AbC123_456-", "ext": ["mp3"]},
     ],
 )
 def test_resolve_download_file_rejects_missing_or_unsafe_paths(
