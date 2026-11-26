@@ -9,6 +9,10 @@ body {
     background: #090d18;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 .page-shell {
     background:
         radial-gradient(ellipse at 50% 42%, rgb(91 33 182 / 18%), transparent 48%),
@@ -20,4 +24,12 @@ button:focus-visible,
 a:focus-visible {
     outline: 2px solid #c4b5fd;
     outline-offset: 3px;
+}
+
+.metadata-thumbnail {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0.75rem;
+    background: #020617;
+    object-fit: cover;
 }
