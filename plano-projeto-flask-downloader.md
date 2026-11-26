@@ -409,7 +409,7 @@ previsível.
 -   [x] Registrar as rotas.
 -   [x] Configurar variáveis de ambiente.
 -   [x] Criar a página inicial.
--   [ ] Verificar FFmpeg e FFprobe.
+-   [x] Verificar FFmpeg e FFprobe.
 
 **Entrega:** aplicação Flask executando e renderizando a página
 principal.
