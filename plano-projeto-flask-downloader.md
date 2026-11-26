@@ -417,7 +417,7 @@ principal.
 ### Fase 2 --- Identificação do conteúdo
 
 -   [x] Implementar validação de URL.
--   [ ] Criar serviço de consulta com `yt-dlp`.
+-   [x] Criar serviço de consulta com `yt-dlp`.
 -   [ ] Implementar endpoint `/api/metadata`.
 -   [ ] Retornar título, thumbnail, duração e formatos disponíveis.
 -   [ ] Exibir a prévia no frontend.
