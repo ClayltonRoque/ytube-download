@@ -1,11 +1,18 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
+from app.services.downloader import download_audio, download_video
+from app.services.download_tasks import DownloadTaskManager
 from app.services.youtube import (
     YouTubeQueryError,
     build_video_metadata,
     get_video_info,
 )
-from app.utils.validators import validate_youtube_url
+from app.utils.validators import (
+    parse_video_quality,
+    validate_audio_options,
+    validate_video_format,
+    validate_youtube_url,
+)
 
 
 bp = Blueprint("downloads", __name__, url_prefix="/api")
@@ -44,3 +51,73 @@ def metadata():
         return _error_response("provider_error", str(exc), 502)
 
     return jsonify({"success": True, "metadata": build_video_metadata(info)})
+
+
+@bp.post("/download")
+def start_download():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _error_response(
+            "invalid_request",
+            "Envie um objeto JSON com URL, tipo de mídia e opções.",
+            400,
+        )
+
+    try:
+        url = validate_youtube_url(data.get("url"))
+    except ValueError as exc:
+        return _error_response("invalid_url", str(exc), 400)
+
+    media_type = data.get("media_type")
+    if media_type == "audio":
+        try:
+            audio_format, audio_quality = validate_audio_options(
+                data.get("format", "mp3"),
+                data.get("quality"),
+            )
+        except ValueError as exc:
+            return _error_response("invalid_options", str(exc), 400)
+
+        download_function = download_audio
+        download_options = {
+            "audio_format": audio_format,
+            "audio_quality": audio_quality,
+        }
+    elif media_type == "video":
+        try:
+            video_format = validate_video_format(data.get("format", "mp4"))
+            video_quality = parse_video_quality(data.get("quality"))
+        except ValueError as exc:
+            return _error_response("invalid_options", str(exc), 400)
+
+        download_function = download_video
+        download_options = {
+            "video_format": video_format,
+            "video_quality": video_quality,
+        }
+    else:
+        return _error_response(
+            "invalid_media_type",
+            "O tipo de mídia deve ser 'audio' ou 'video'.",
+            400,
+        )
+
+    task_manager: DownloadTaskManager = current_app.extensions[
+        "download_task_manager"
+    ]
+    task = task_manager.create_task(
+        download_function,
+        url,
+        current_app.config["DOWNLOAD_FOLDER"],
+        **download_options,
+    )
+
+    return jsonify(
+        {
+            "success": True,
+            "task": {
+                "id": task.id,
+                "status": task.status,
+            },
+        }
+    ), 202
