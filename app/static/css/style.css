@@ -33,3 +33,26 @@ a:focus-visible {
     background: #020617;
     object-fit: cover;
 }
+
+#download-progress {
+    height: 0.75rem;
+    appearance: none;
+    border: 0;
+    border-radius: 9999px;
+    background: #1e293b;
+}
+
+#download-progress::-webkit-progress-bar {
+    border-radius: 9999px;
+    background: #1e293b;
+}
+
+#download-progress::-webkit-progress-value {
+    border-radius: 9999px;
+    background: #a78bfa;
+}
+
+#download-progress::-moz-progress-bar {
+    border-radius: 9999px;
+    background: #a78bfa;
+}

@@ -65,6 +65,51 @@
                 </div>
             </section>
 
+            <form
+                id="download-form"
+                data-endpoint="{{ url_for('downloads.start_download') }}"
+                data-progress-endpoint-template="{{ url_for('downloads.download_progress', task_id='__TASK_ID__') }}"
+                class="mt-6 space-y-4 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left shadow-2xl shadow-violet-950/30 sm:p-6"
+                hidden
+            >
+                <h2 class="text-lg font-semibold text-white">Opções de download</h2>
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <div>
+                        <label for="media-type" class="mb-2 block text-sm font-medium text-slate-200">Tipo de mídia</label>
+                        <select id="media-type" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white">
+                            <option value="audio">Áudio</option>
+                            <option value="video">Vídeo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="download-format" class="mb-2 block text-sm font-medium text-slate-200">Formato</label>
+                        <select id="download-format" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white"></select>
+                    </div>
+                    <div id="quality-group">
+                        <label id="quality-label" for="download-quality" class="mb-2 block text-sm font-medium text-slate-200">Qualidade</label>
+                        <select id="download-quality" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white"></select>
+                    </div>
+                </div>
+
+                <button
+                    id="download-submit"
+                    type="submit"
+                    class="w-full rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+                >
+                    Iniciar download
+                </button>
+                <p id="download-status" class="text-sm text-slate-300" role="status" aria-live="polite"></p>
+                <div id="download-progress-panel" class="space-y-2" hidden>
+                    <div class="flex items-center justify-between gap-3 text-xs text-slate-300">
+                        <span id="download-progress-label">Aguardando progresso...</span>
+                        <span id="download-progress-percent"></span>
+                    </div>
+                    <progress id="download-progress" class="w-full accent-violet-400" max="100" aria-label="Progresso do download"></progress>
+                    <p id="download-progress-details" class="text-xs text-slate-400"></p>
+                </div>
+                <p id="download-error" class="text-sm text-rose-300" role="alert" hidden></p>
+            </form>
+
             <p class="mt-6 text-xs text-slate-500">
                 Use apenas conteúdos que você tem autorização para baixar.
             </p>
