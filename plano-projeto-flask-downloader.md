@@ -405,7 +405,7 @@ previsível.
 
 -   [ ] Criar o repositório e o ambiente virtual.
 -   [x] Criar a estrutura de diretórios.
--   [ ] Configurar Flask com Application Factory.
+-   [x] Configurar Flask com Application Factory.
 -   [ ] Registrar as rotas.
 -   [ ] Configurar variáveis de ambiente.
 -   [ ] Criar a página inicial.
