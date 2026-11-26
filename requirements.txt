@@ -1,5 +1,5 @@
 Flask
 python-dotenv
 pytest
-spotipy
+fetchtune==0.3.3
 yt-dlp

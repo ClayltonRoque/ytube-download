@@ -128,11 +128,8 @@ def test_metadata_endpoint_returns_spotify_track_metadata(get_track_metadata):
         ),
     }
     get_track_metadata.return_value = metadata
-    app = create_app()
-    app.config["SPOTIFY_CLIENT_ID"] = "client-id"
-    app.config["SPOTIFY_CLIENT_SECRET"] = "client-secret"
 
-    response = app.test_client().post("/api/metadata", json={"url": SPOTIFY_URL})
+    response = create_client().post("/api/metadata", json={"url": SPOTIFY_URL})
 
     assert response.status_code == 200
     assert response.get_json() == {
@@ -140,22 +137,7 @@ def test_metadata_endpoint_returns_spotify_track_metadata(get_track_metadata):
         "provider": "spotify",
         "metadata": metadata,
     }
-    get_track_metadata.assert_called_once_with(
-        "AbCdEfGhIjKlMnOpQrStUv",
-        "client-id",
-        "client-secret",
-    )
-
-
-def test_metadata_endpoint_reports_missing_spotify_configuration():
-    app = create_app()
-    app.config["SPOTIFY_CLIENT_ID"] = None
-    app.config["SPOTIFY_CLIENT_SECRET"] = None
-
-    response = app.test_client().post("/api/metadata", json={"url": SPOTIFY_URL})
-
-    assert response.status_code == 503
-    assert response.get_json()["error"]["code"] == "spotify_not_configured"
+    get_track_metadata.assert_called_once_with("AbCdEfGhIjKlMnOpQrStUv")
 
 
 @patch("app.routes.downloads.get_spotify_track_metadata")
@@ -164,11 +146,26 @@ def test_metadata_endpoint_rejects_spotify_playlists_without_querying(
 ):
     response = create_client().post(
         "/api/metadata",
-        json={
-            "url": "https://open.spotify.com/playlist/AbCdEfGhIjKlMnOpQrStUv"
-        },
+        json={"url": "https://open.spotify.com/playlist/AbCdEfGhIjKlMnOpQrStUv"},
     )
 
     assert response.status_code == 400
     assert response.get_json()["error"]["code"] == "invalid_url"
     get_track_metadata.assert_not_called()
+
+
+@patch("app.routes.downloads.get_spotify_track_metadata")
+def test_metadata_endpoint_returns_bad_gateway_for_fetchtune_error(
+    get_track_metadata,
+):
+    from app.services.fetchtune_metadata import FetchTuneMetadataError
+
+    get_track_metadata.side_effect = FetchTuneMetadataError("Consulta indisponível.")
+
+    response = create_client().post("/api/metadata", json={"url": SPOTIFY_URL})
+
+    assert response.status_code == 502
+    assert response.get_json()["error"] == {
+        "code": "provider_error",
+        "message": "Consulta indisponível.",
+    }

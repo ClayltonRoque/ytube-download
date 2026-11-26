@@ -4,9 +4,8 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.services.downloader import download_audio, download_video
 from app.services.download_tasks import DownloadTaskManager
-from app.services.spotify import (
-    SpotifyConfigurationError,
-    SpotifyQueryError,
+from app.services.fetchtune_metadata import (
+    FetchTuneMetadataError,
     get_spotify_track_metadata,
 )
 from app.services.youtube import (
@@ -71,14 +70,8 @@ def metadata():
             return _error_response("invalid_url", str(exc), 400)
 
         try:
-            spotify_metadata = get_spotify_track_metadata(
-                track_id,
-                current_app.config.get("SPOTIFY_CLIENT_ID"),
-                current_app.config.get("SPOTIFY_CLIENT_SECRET"),
-            )
-        except SpotifyConfigurationError as exc:
-            return _error_response("spotify_not_configured", str(exc), 503)
-        except SpotifyQueryError as exc:
+            spotify_metadata = get_spotify_track_metadata(track_id)
+        except FetchTuneMetadataError as exc:
             return _error_response("provider_error", str(exc), 502)
 
         return jsonify(

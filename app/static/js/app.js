@@ -98,6 +98,8 @@ if (form) {
             const url = new URL(value);
             const allowedHost = provider === "spotify"
                 ? url.hostname === "i.scdn.co"
+                    || url.hostname.endsWith(".scdn.co")
+                    || url.hostname.endsWith(".spotifycdn.com")
                 : url.hostname.endsWith(".ytimg.com");
             if (url.protocol === "https:" && allowedHost) {
                 return url.href;
@@ -393,7 +395,7 @@ if (form) {
         credits.textContent = isSpotify
             ? [artists.join(", "), album].filter(Boolean).join(" · ")
             : "";
-        credits.hidden = !isSpotify;
+        credits.hidden = !isSpotify || !credits.textContent;
 
         const formattedDuration = formatDuration(metadata.duration);
         duration.textContent = formattedDuration
