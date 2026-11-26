@@ -89,14 +89,19 @@ if (form) {
         form.setAttribute("aria-busy", "true");
 
         try {
-            const response = await fetch(form.dataset.endpoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                body: JSON.stringify({ url: urlInput.value.trim() }),
-            });
+            let response;
+            try {
+                response = await fetch(form.dataset.endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify({ url: urlInput.value.trim() }),
+                });
+            } catch {
+                throw new Error("Não foi possível conectar ao servidor.");
+            }
 
             let result;
             try {
@@ -106,7 +111,10 @@ if (form) {
             }
 
             if (!response.ok) {
-                throw new Error(result.error || "Não foi possível identificar o conteúdo.");
+                const message = typeof result.error === "string"
+                    ? result.error
+                    : result.error?.message;
+                throw new Error(message || "Não foi possível identificar o conteúdo.");
             }
             if (result.success !== true || !result.metadata) {
                 throw new Error("O servidor retornou metadados incompletos.");

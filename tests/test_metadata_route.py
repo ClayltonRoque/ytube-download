@@ -71,7 +71,13 @@ def test_metadata_endpoint_requires_json_object():
     )
 
     assert response.status_code == 400
-    assert "error" in response.get_json()
+    assert response.get_json() == {
+        "success": False,
+        "error": {
+            "code": "invalid_request",
+            "message": "Envie um objeto JSON com o campo 'url'.",
+        },
+    }
 
 
 @patch("app.routes.downloads.get_video_info")
@@ -81,6 +87,13 @@ def test_metadata_endpoint_rejects_invalid_url_without_querying(get_video_info):
     )
 
     assert response.status_code == 400
+    assert response.get_json() == {
+        "success": False,
+        "error": {
+            "code": "invalid_url",
+            "message": "A URL deve pertencer ao YouTube.",
+        },
+    }
     get_video_info.assert_not_called()
 
 
@@ -91,4 +104,10 @@ def test_metadata_endpoint_returns_bad_gateway_for_provider_error(get_video_info
     response = create_client().post("/api/metadata", json={"url": VIDEO_URL})
 
     assert response.status_code == 502
-    assert response.get_json() == {"error": "Consulta indisponível."}
+    assert response.get_json() == {
+        "success": False,
+        "error": {
+            "code": "provider_error",
+            "message": "Consulta indisponível.",
+        },
+    }
