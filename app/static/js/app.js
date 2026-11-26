@@ -32,6 +32,7 @@ if (form) {
     const progressDetails = document.querySelector("#download-progress-details");
     const buttonLabel = submitButton.textContent.trim();
     const downloadButtonLabel = downloadButton.textContent.trim();
+    const mediaTypeGroup = mediaTypeSelect.closest("div");
     let currentMetadata = null;
     let activeTaskId = null;
     let pollingTimer = null;
@@ -375,7 +376,7 @@ if (form) {
 
     function showMetadata(provider, metadata) {
         const isSpotify = provider === "spotify";
-        currentMetadata = isSpotify ? null : metadata;
+        currentMetadata = metadata;
         previewProvider.textContent = isSpotify ? "Spotify" : "YouTube";
         title.textContent = metadata.title || "Título indisponível";
 
@@ -409,22 +410,22 @@ if (form) {
                 metadata.spotify_url,
                 "open.spotify.com",
             );
-            const youtubeUrl = getExternalUrl(
-                metadata.youtube_search_url,
-                "www.youtube.com",
-            );
-            if (!spotifyUrl || !youtubeUrl) {
+            if (!spotifyUrl) {
                 throw new Error("O servidor retornou links externos inválidos.");
             }
             spotifyPlayLink.href = spotifyUrl;
-            youtubeSearchLink.href = youtubeUrl;
         }
 
         preview.hidden = false;
         if (!isSpotify) {
             updateDownloadOptions();
         }
-        downloadForm.hidden = isSpotify;
+        downloadForm.hidden = false;
+        mediaTypeGroup.hidden = isSpotify;
+        if (isSpotify) {
+            mediaTypeSelect.value = "audio";
+            updateDownloadOptions();
+        }
     }
 
     urlInput.addEventListener("input", () => {
@@ -433,6 +434,7 @@ if (form) {
         preview.hidden = true;
         downloadForm.hidden = true;
         currentMetadata = null;
+        mediaTypeGroup.hidden = false;
         resetProgress();
     });
 
@@ -505,6 +507,7 @@ if (form) {
 
     mediaTypeSelect.addEventListener("change", updateDownloadOptions);
     formatSelect.addEventListener("change", updateQualityOptions);
+    youtubeSearchLink.addEventListener("click", () => downloadForm.requestSubmit());
 
     downloadForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -527,6 +530,7 @@ if (form) {
         const mediaType = mediaTypeSelect.value;
         const options = {
             url: urlInput.value.trim(),
+            spotify_url: currentMetadata.spotify_url || null,
             media_type: mediaType,
             format: formatSelect.value,
             quality: qualityGroup.hidden ? null : qualitySelect.value,

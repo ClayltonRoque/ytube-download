@@ -26,8 +26,10 @@ def _execute_download(
     download_folder: str | Path,
     media_options: dict[str, Any],
     progress_hook: ProgressHook | None = None,
+    *,
+    allow_search: bool = False,
 ) -> dict[str, Any]:
-    validated_url = validate_youtube_url(url)
+    validated_url = url if allow_search else validate_youtube_url(url)
     output_folder = Path(download_folder)
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -47,6 +49,9 @@ def _execute_download(
     except DownloadError as exc:
         raise MediaDownloadError("Não foi possível baixar o vídeo.") from exc
 
+    if allow_search and isinstance(info, dict) and info.get("_type") == "playlist":
+        entries = info.get("entries")
+        info = next((entry for entry in entries or [] if isinstance(entry, dict)), None)
     if not isinstance(info, dict) or info.get("_type") == "playlist":
         raise MediaDownloadError("O endereço não retornou dados de um vídeo.")
 
@@ -89,6 +94,44 @@ def download_audio(
             "postprocessors": [postprocessor],
         },
         progress_hook,
+    )
+
+
+def download_spotify_audio(
+    metadata: dict[str, Any],
+    download_folder: str | Path,
+    audio_format: str = "mp3",
+    audio_quality: int | str | None = None,
+    progress_hook: ProgressHook | None = None,
+) -> dict[str, Any]:
+    """Find a Spotify track on YouTube and tag the result with FetchTune metadata."""
+    title = metadata.get("title")
+    artists = metadata.get("artists")
+    if not isinstance(title, str) or not title.strip() or not isinstance(artists, list):
+        raise ValueError("Os metadados da faixa estão incompletos.")
+    artists = [artist.strip() for artist in artists if isinstance(artist, str) and artist.strip()]
+    if not artists:
+        raise ValueError("Os metadados da faixa estão incompletos.")
+
+    audio_format, audio_quality = validate_audio_options(audio_format, audio_quality)
+    postprocessor = {"key": "FFmpegExtractAudio", "preferredcodec": audio_format}
+    if audio_quality is not None:
+        postprocessor["preferredquality"] = str(audio_quality)
+    tag_args = ["-metadata", f"title={title.strip()}", "-metadata", f"artist={', '.join(artists)}"]
+    album = metadata.get("album")
+    if isinstance(album, str) and album.strip():
+        tag_args.extend(["-metadata", f"album={album.strip()}"])
+
+    return _execute_download(
+        f"ytsearch1:{title.strip()} {' '.join(artists)}",
+        download_folder,
+        {
+            "format": "bestaudio/best",
+            "postprocessors": [postprocessor, {"key": "FFmpegMetadata"}],
+            "postprocessor_args": {"FFmpegMetadata": tag_args},
+        },
+        progress_hook,
+        allow_search=True,
     )
 
 

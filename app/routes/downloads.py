@@ -2,7 +2,7 @@ import re
 
 from flask import Blueprint, current_app, jsonify, request, send_file
 
-from app.services.downloader import download_audio, download_video
+from app.services.downloader import download_audio, download_spotify_audio, download_video
 from app.services.download_tasks import DownloadTaskManager
 from app.services.fetchtune_metadata import (
     FetchTuneMetadataError,
@@ -105,13 +105,38 @@ def start_download():
             400,
         )
 
-    try:
-        url = validate_youtube_url(data.get("url"))
-    except ValueError as exc:
-        return _error_response("invalid_url", str(exc), 400)
+    spotify_url = data.get("spotify_url")
+    spotify_metadata = None
+    if spotify_url:
+        try:
+            track_id = validate_spotify_track_url(spotify_url)
+        except ValueError as exc:
+            return _error_response("invalid_url", str(exc), 400)
+        try:
+            spotify_metadata = get_spotify_track_metadata(track_id)
+        except FetchTuneMetadataError as exc:
+            return _error_response("provider_error", str(exc), 502)
+        url = None
+    else:
+        try:
+            url = validate_youtube_url(data.get("url"))
+        except ValueError as exc:
+            return _error_response("invalid_url", str(exc), 400)
 
     media_type = data.get("media_type")
-    if media_type == "audio":
+    if spotify_metadata is not None and media_type == "audio":
+        try:
+            audio_format, audio_quality = validate_audio_options(
+                data.get("format", "mp3"), data.get("quality")
+            )
+        except ValueError as exc:
+            return _error_response("invalid_options", str(exc), 400)
+        download_function = download_spotify_audio
+        download_args = (spotify_metadata,)
+        download_options = {"audio_format": audio_format, "audio_quality": audio_quality}
+    elif spotify_metadata is not None:
+        return _error_response("invalid_media_type", "Faixas do Spotify só podem ser baixadas como áudio.", 400)
+    elif media_type == "audio":
         try:
             audio_format, audio_quality = validate_audio_options(
                 data.get("format", "mp3"),
@@ -121,6 +146,7 @@ def start_download():
             return _error_response("invalid_options", str(exc), 400)
 
         download_function = download_audio
+        download_args = (url,)
         download_options = {
             "audio_format": audio_format,
             "audio_quality": audio_quality,
@@ -133,6 +159,7 @@ def start_download():
             return _error_response("invalid_options", str(exc), 400)
 
         download_function = download_video
+        download_args = (url,)
         download_options = {
             "video_format": video_format,
             "video_quality": video_quality,
@@ -149,7 +176,7 @@ def start_download():
     ]
     task = task_manager.create_task(
         download_function,
-        url,
+        *download_args,
         current_app.config["DOWNLOAD_FOLDER"],
         **download_options,
     )
