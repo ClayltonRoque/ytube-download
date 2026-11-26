@@ -408,7 +408,7 @@ previsível.
 -   [x] Configurar Flask com Application Factory.
 -   [x] Registrar as rotas.
 -   [x] Configurar variáveis de ambiente.
--   [ ] Criar a página inicial.
+-   [x] Criar a página inicial.
 -   [ ] Verificar FFmpeg e FFprobe.
 
 **Entrega:** aplicação Flask executando e renderizando a página
