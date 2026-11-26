@@ -212,6 +212,34 @@ def test_file_endpoint_serves_completed_task_as_attachment(tmp_path):
     )
 
 
+def test_file_endpoint_serves_final_extension_when_task_metadata_is_stale(
+    tmp_path,
+):
+    download_folder = tmp_path / "downloads"
+    download_folder.mkdir()
+    video_id = "AbC123_456-"
+    output_file = download_folder / f"{video_id}.mp3"
+    output_file.write_bytes(b"audio data")
+    app = create_test_app(download_folder)
+    task = app.extensions["download_task_manager"].create_task(
+        lambda progress_hook: {
+            "filepath": str(download_folder / f"{video_id}.webm"),
+            "id": video_id,
+            "ext": "webm",
+        }
+    )
+    assert task.future is not None
+    task.future.result(timeout=2)
+
+    response = app.test_client().get(f"/api/download/file/{task.id}")
+
+    assert response.status_code == 200
+    assert response.data == b"audio data"
+    assert response.headers["Content-Disposition"] == (
+        f'attachment; filename={video_id}.mp3'
+    )
+
+
 def test_file_endpoint_rejects_task_that_is_not_completed(tmp_path):
     app = create_test_app(tmp_path)
     started = Event()

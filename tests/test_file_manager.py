@@ -49,6 +49,39 @@ def test_resolve_download_file_falls_back_to_video_id_and_final_extension(
     assert resolved == output_file.resolve()
 
 
+def test_resolve_download_file_falls_back_when_reported_extension_is_stale(
+    tmp_path,
+):
+    download_folder = tmp_path / "downloads"
+    download_folder.mkdir()
+    output_file = download_folder / "AbC123_456-.mp3"
+    output_file.write_bytes(b"audio")
+
+    resolved = resolve_download_file(
+        {
+            "filepath": str(download_folder / "AbC123_456-.webm"),
+            "id": "AbC123_456-",
+            "ext": "webm",
+        },
+        download_folder,
+    )
+
+    assert resolved == output_file.resolve()
+
+
+def test_resolve_download_file_rejects_ambiguous_id_fallback(tmp_path):
+    download_folder = tmp_path / "downloads"
+    download_folder.mkdir()
+    (download_folder / "AbC123_456-.mp3").write_bytes(b"audio")
+    (download_folder / "AbC123_456-.mp4").write_bytes(b"video")
+
+    with pytest.raises(DownloadFileError):
+        resolve_download_file(
+            {"id": "AbC123_456-", "ext": "webm"},
+            download_folder,
+        )
+
+
 @pytest.mark.parametrize(
     "download_info",
     [
