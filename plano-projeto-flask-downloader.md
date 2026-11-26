@@ -407,7 +407,7 @@ previsível.
 -   [x] Criar a estrutura de diretórios.
 -   [x] Configurar Flask com Application Factory.
 -   [x] Registrar as rotas.
--   [ ] Configurar variáveis de ambiente.
+-   [x] Configurar variáveis de ambiente.
 -   [ ] Criar a página inicial.
 -   [ ] Verificar FFmpeg e FFprobe.
 
