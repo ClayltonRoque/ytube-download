@@ -3,7 +3,11 @@ from unittest.mock import patch
 import pytest
 from yt_dlp.utils import DownloadError
 
-from app.services.youtube import YouTubeQueryError, get_video_info
+from app.services.youtube import (
+    YouTubeQueryError,
+    build_video_metadata,
+    get_video_info,
+)
 
 
 VIDEO_URL = "https://www.youtube.com/watch?v=AbC123_456-"
@@ -64,3 +68,44 @@ def test_get_video_info_rejects_missing_results(youtube_dl_class):
 
     with pytest.raises(YouTubeQueryError):
         get_video_info(VIDEO_URL)
+
+
+def test_build_video_metadata_uses_approximate_filesize_and_skips_invalid_formats():
+    metadata = build_video_metadata(
+        {
+            "title": "Test video",
+            "formats": [
+                {"format_id": "audio", "filesize_approx": 512},
+                {"ext": "mp4"},
+                "invalid format",
+            ],
+        }
+    )
+
+    assert metadata == {
+        "title": "Test video",
+        "thumbnail": None,
+        "duration": None,
+        "formats": [
+            {
+                "format_id": "audio",
+                "ext": None,
+                "format_note": None,
+                "resolution": None,
+                "height": None,
+                "fps": None,
+                "filesize": 512,
+                "video_codec": None,
+                "audio_codec": None,
+            }
+        ],
+    }
+
+
+def test_build_video_metadata_returns_empty_formats_when_unavailable():
+    assert build_video_metadata({"title": "Test video"}) == {
+        "title": "Test video",
+        "thumbnail": None,
+        "duration": None,
+        "formats": [],
+    }

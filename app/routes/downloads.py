@@ -1,6 +1,10 @@
 from flask import Blueprint, jsonify, request
 
-from app.services.youtube import YouTubeQueryError, get_video_info
+from app.services.youtube import (
+    YouTubeQueryError,
+    build_video_metadata,
+    get_video_info,
+)
 from app.utils.validators import validate_youtube_url
 
 
@@ -23,4 +27,4 @@ def metadata():
     except YouTubeQueryError as exc:
         return jsonify({"error": str(exc)}), 502
 
-    return jsonify({"success": True, "metadata": info})
+    return jsonify({"success": True, "metadata": build_video_metadata(info)})

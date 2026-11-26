@@ -15,13 +15,53 @@ def create_client():
 
 @patch("app.routes.downloads.get_video_info")
 def test_metadata_endpoint_returns_service_result(get_video_info):
-    info = {"id": "AbC123_456-", "title": "Test video"}
+    info = {
+        "id": "AbC123_456-",
+        "title": "Test video",
+        "thumbnail": "https://i.ytimg.com/vi/AbC123_456-/hqdefault.jpg",
+        "duration": 180,
+        "description": "Internal yt-dlp data",
+        "formats": [
+            {
+                "format_id": "18",
+                "ext": "mp4",
+                "format_note": "360p",
+                "resolution": "640x360",
+                "height": 360,
+                "fps": 30,
+                "filesize": 1024,
+                "vcodec": "avc1",
+                "acodec": "mp4a",
+                "url": "https://media.example/temporary",
+            }
+        ],
+    }
     get_video_info.return_value = info
 
     response = create_client().post("/api/metadata", json={"url": VIDEO_URL})
 
     assert response.status_code == 200
-    assert response.get_json() == {"success": True, "metadata": info}
+    assert response.get_json() == {
+        "success": True,
+        "metadata": {
+            "title": "Test video",
+            "thumbnail": "https://i.ytimg.com/vi/AbC123_456-/hqdefault.jpg",
+            "duration": 180,
+            "formats": [
+                {
+                    "format_id": "18",
+                    "ext": "mp4",
+                    "format_note": "360p",
+                    "resolution": "640x360",
+                    "height": 360,
+                    "fps": 30,
+                    "filesize": 1024,
+                    "video_codec": "avc1",
+                    "audio_codec": "mp4a",
+                }
+            ],
+        },
+    }
     get_video_info.assert_called_once_with(VIDEO_URL)
 
 
