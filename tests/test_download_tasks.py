@@ -41,7 +41,7 @@ def test_download_task_tracks_failures_and_preserves_future_exception():
 
     failed_task = task_manager.get_task(task.id)
     assert failed_task.status == "failed"
-    assert failed_task.error == "download failed"
+    assert failed_task.error == "Não foi possível concluir o download."
 
 
 def test_download_task_stores_sanitized_progress():

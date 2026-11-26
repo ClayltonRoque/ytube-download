@@ -7,6 +7,7 @@ from typing import Any, Callable, Literal
 from uuid import uuid4
 
 from app.services.download_runner import submit_download
+from app.services.downloader import MediaDownloadError
 
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,12 @@ class DownloadTaskManager:
             )
         except Exception as exc:
             logger.exception("Download task %s failed", task_id)
-            self._update_task(task_id, status="failed", error=str(exc))
+            error = (
+                str(exc)
+                if isinstance(exc, (MediaDownloadError, ValueError))
+                else "Não foi possível concluir o download."
+            )
+            self._update_task(task_id, status="failed", error=error)
             raise
 
         self._update_task(task_id, status="completed")

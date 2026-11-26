@@ -1,5 +1,8 @@
+from threading import Event
 from unittest.mock import ANY, patch
 from uuid import UUID
+
+import pytest
 
 from app import create_app
 
@@ -100,3 +103,91 @@ def test_download_endpoint_rejects_invalid_options_without_scheduling(
     assert response.status_code == 400
     assert response.get_json()["error"]["code"] == "invalid_options"
     download_audio.assert_not_called()
+
+
+def test_progress_endpoint_returns_task_state_and_sanitized_progress(tmp_path):
+    app = create_test_app(tmp_path)
+    task_manager = app.extensions["download_task_manager"]
+    started = Event()
+    release = Event()
+    progress_info = {
+        "status": "downloading",
+        "downloaded_bytes": 64,
+        "total_bytes": 128,
+        "filename": "/private/path/video.mp4",
+    }
+
+    def wait_for_release(progress_hook):
+        progress_hook(progress_info)
+        started.set()
+        assert release.wait(timeout=5)
+
+    task = task_manager.create_task(wait_for_release)
+    assert task.future is not None
+    try:
+        assert started.wait(timeout=2)
+        response = app.test_client().get(
+            f"/api/download/progress/{task.id}"
+        )
+    finally:
+        release.set()
+
+    task.future.result(timeout=2)
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "success": True,
+        "task": {
+            "id": task.id,
+            "status": "running",
+            "progress": {
+                "status": "downloading",
+                "downloaded_bytes": 64,
+                "total_bytes": 128,
+                "percentage": 50.0,
+                "speed": None,
+                "eta": None,
+            },
+            "error": None,
+        },
+    }
+
+    completed_response = app.test_client().get(
+        f"/api/download/progress/{task.id}"
+    )
+    assert completed_response.get_json()["task"]["status"] == "completed"
+
+
+def test_progress_endpoint_returns_not_found_for_unknown_task(tmp_path):
+    response = create_test_app(tmp_path).test_client().get(
+        "/api/download/progress/not-a-task"
+    )
+
+    assert response.status_code == 404
+    assert response.get_json() == {
+        "success": False,
+        "error": {
+            "code": "task_not_found",
+            "message": "Tarefa de download não encontrada.",
+        },
+    }
+
+
+def test_progress_endpoint_hides_unexpected_failure_details(tmp_path):
+    app = create_test_app(tmp_path)
+    task_manager = app.extensions["download_task_manager"]
+
+    def fail_with_internal_path(progress_hook):
+        raise OSError("permission denied: /private/downloads")
+
+    task = task_manager.create_task(fail_with_internal_path)
+    assert task.future is not None
+    with pytest.raises(OSError):
+        task.future.result(timeout=2)
+
+    response = app.test_client().get(f"/api/download/progress/{task.id}")
+
+    assert response.status_code == 200
+    assert response.get_json()["task"]["error"] == (
+        "Não foi possível concluir o download."
+    )
+    assert "/private/downloads" not in response.get_data(as_text=True)

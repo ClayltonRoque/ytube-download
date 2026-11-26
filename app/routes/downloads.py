@@ -121,3 +121,29 @@ def start_download():
             },
         }
     ), 202
+
+
+@bp.get("/download/progress/<task_id>")
+def download_progress(task_id):
+    task_manager: DownloadTaskManager = current_app.extensions[
+        "download_task_manager"
+    ]
+    task = task_manager.get_task(task_id)
+    if task is None:
+        return _error_response(
+            "task_not_found",
+            "Tarefa de download não encontrada.",
+            404,
+        )
+
+    return jsonify(
+        {
+            "success": True,
+            "task": {
+                "id": task.id,
+                "status": task.status,
+                "progress": task.progress,
+                "error": task.error,
+            },
+        }
+    )
