@@ -105,6 +105,24 @@ def test_download_endpoint_rejects_invalid_options_without_scheduling(
     download_audio.assert_not_called()
 
 
+@patch("app.routes.downloads.download_audio")
+def test_download_endpoint_rejects_spotify_urls(download_audio, tmp_path):
+    app = create_test_app(tmp_path)
+
+    response = app.test_client().post(
+        "/api/download",
+        json={
+            "url": "https://open.spotify.com/track/AbCdEfGhIjKlMnOpQrStUv",
+            "media_type": "audio",
+            "format": "mp3",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"]["code"] == "invalid_url"
+    download_audio.assert_not_called()
+
+
 def test_progress_endpoint_returns_task_state_and_sanitized_progress(tmp_path):
     app = create_test_app(tmp_path)
     task_manager = app.extensions["download_task_manager"]

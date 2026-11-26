@@ -5,6 +5,7 @@ from app.services.youtube import YouTubeQueryError
 
 
 VIDEO_URL = "https://www.youtube.com/watch?v=AbC123_456-"
+SPOTIFY_URL = "https://open.spotify.com/track/AbCdEfGhIjKlMnOpQrStUv"
 
 
 def create_client():
@@ -111,3 +112,63 @@ def test_metadata_endpoint_returns_bad_gateway_for_provider_error(get_video_info
             "message": "Consulta indisponível.",
         },
     }
+
+
+@patch("app.routes.downloads.get_spotify_track_metadata")
+def test_metadata_endpoint_returns_spotify_track_metadata(get_track_metadata):
+    metadata = {
+        "title": "Song",
+        "artists": ["Artist"],
+        "album": "Album",
+        "thumbnail": None,
+        "duration": 120,
+        "spotify_url": SPOTIFY_URL,
+        "youtube_search_url": (
+            "https://www.youtube.com/results?search_query=Song+Artist"
+        ),
+    }
+    get_track_metadata.return_value = metadata
+    app = create_app()
+    app.config["SPOTIFY_CLIENT_ID"] = "client-id"
+    app.config["SPOTIFY_CLIENT_SECRET"] = "client-secret"
+
+    response = app.test_client().post("/api/metadata", json={"url": SPOTIFY_URL})
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "success": True,
+        "provider": "spotify",
+        "metadata": metadata,
+    }
+    get_track_metadata.assert_called_once_with(
+        "AbCdEfGhIjKlMnOpQrStUv",
+        "client-id",
+        "client-secret",
+    )
+
+
+def test_metadata_endpoint_reports_missing_spotify_configuration():
+    app = create_app()
+    app.config["SPOTIFY_CLIENT_ID"] = None
+    app.config["SPOTIFY_CLIENT_SECRET"] = None
+
+    response = app.test_client().post("/api/metadata", json={"url": SPOTIFY_URL})
+
+    assert response.status_code == 503
+    assert response.get_json()["error"]["code"] == "spotify_not_configured"
+
+
+@patch("app.routes.downloads.get_spotify_track_metadata")
+def test_metadata_endpoint_rejects_spotify_playlists_without_querying(
+    get_track_metadata,
+):
+    response = create_client().post(
+        "/api/metadata",
+        json={
+            "url": "https://open.spotify.com/playlist/AbCdEfGhIjKlMnOpQrStUv"
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"]["code"] == "invalid_url"
+    get_track_metadata.assert_not_called()

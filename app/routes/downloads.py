@@ -4,14 +4,21 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.services.downloader import download_audio, download_video
 from app.services.download_tasks import DownloadTaskManager
+from app.services.spotify import (
+    SpotifyConfigurationError,
+    SpotifyQueryError,
+    get_spotify_track_metadata,
+)
 from app.services.youtube import (
     YouTubeQueryError,
     build_video_metadata,
     get_video_info,
 )
 from app.utils.validators import (
+    is_spotify_url,
     parse_video_quality,
     validate_audio_options,
+    validate_spotify_track_url,
     validate_video_format,
     validate_youtube_url,
 )
@@ -56,8 +63,34 @@ def metadata():
             400,
         )
 
+    url = data.get("url")
+    if is_spotify_url(url):
+        try:
+            track_id = validate_spotify_track_url(url)
+        except ValueError as exc:
+            return _error_response("invalid_url", str(exc), 400)
+
+        try:
+            spotify_metadata = get_spotify_track_metadata(
+                track_id,
+                current_app.config.get("SPOTIFY_CLIENT_ID"),
+                current_app.config.get("SPOTIFY_CLIENT_SECRET"),
+            )
+        except SpotifyConfigurationError as exc:
+            return _error_response("spotify_not_configured", str(exc), 503)
+        except SpotifyQueryError as exc:
+            return _error_response("provider_error", str(exc), 502)
+
+        return jsonify(
+            {
+                "success": True,
+                "provider": "spotify",
+                "metadata": spotify_metadata,
+            }
+        )
+
     try:
-        url = validate_youtube_url(data.get("url"))
+        url = validate_youtube_url(url)
     except ValueError as exc:
         return _error_response("invalid_url", str(exc), 400)
 

@@ -12,11 +12,65 @@ _YOUTUBE_HOSTS = {
     "youtube-nocookie.com",
     "www.youtube-nocookie.com",
 }
+_SPOTIFY_HOSTS = {"open.spotify.com"}
+_SPOTIFY_TRACK_ID_PATTERN = re.compile(r"[A-Za-z0-9]{22}\Z")
 _VIDEO_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{11}\Z")
 _VIDEO_PATHS = {"embed", "live", "shorts", "v"}
 _AUDIO_FORMATS = {"mp3", "m4a", "flac", "wav", "opus"}
 _MP3_QUALITIES = {128, 192, 320}
 _VIDEO_FORMATS = {"mp4"}
+
+
+def is_spotify_url(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        hostname = urlsplit(value.strip()).hostname
+    except ValueError:
+        return False
+    return hostname is not None and hostname.lower() in _SPOTIFY_HOSTS
+
+
+def validate_spotify_track_url(value: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError("Informe uma URL válida de faixa do Spotify.")
+
+    url = value.strip()
+    if not url or any(character.isspace() for character in url):
+        raise ValueError("Informe uma URL válida de faixa do Spotify.")
+
+    try:
+        parsed = urlsplit(url)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("Informe uma URL válida de faixa do Spotify.") from exc
+
+    if parsed.scheme.lower() != "https" or hostname is None:
+        raise ValueError("A URL do Spotify deve usar HTTPS.")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("A URL do Spotify não pode conter credenciais.")
+    if hostname.lower() not in _SPOTIFY_HOSTS or port not in (None, 443):
+        raise ValueError("A URL deve pertencer ao Spotify.")
+
+    segments = [segment for segment in parsed.path.split("/") if segment]
+    has_locale_prefix = (
+        len(segments) == 3
+        and re.fullmatch(r"intl-[a-z]{2}(?:-[a-z]{2})?", segments[0]) is not None
+    )
+    if has_locale_prefix:
+        segments = segments[1:]
+    if (
+        len(segments) != 2
+        or segments[0] != "track"
+        or _SPOTIFY_TRACK_ID_PATTERN.fullmatch(segments[1]) is None
+    ):
+        raise ValueError(
+            "Use o link de uma faixa individual do Spotify; "
+            "álbuns e playlists não são suportados."
+        )
+
+    return segments[1]
 
 
 def validate_youtube_url(value: str) -> str:

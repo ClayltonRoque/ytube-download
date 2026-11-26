@@ -7,8 +7,14 @@ if (form) {
     const errorMessage = document.querySelector("#metadata-error");
     const preview = document.querySelector("#metadata-preview");
     const thumbnail = document.querySelector("#preview-thumbnail");
+    const previewProvider = document.querySelector("#preview-provider");
     const title = document.querySelector("#preview-title");
+    const credits = document.querySelector("#preview-credits");
     const duration = document.querySelector("#preview-duration");
+    const spotifyActions = document.querySelector("#spotify-actions");
+    const spotifyPlayLink = document.querySelector("#spotify-play-link");
+    const youtubeSearchLink = document.querySelector("#youtube-search-link");
+    const spotifyNotice = document.querySelector("#spotify-notice");
     const downloadForm = document.querySelector("#download-form");
     const mediaTypeSelect = document.querySelector("#media-type");
     const formatSelect = document.querySelector("#download-format");
@@ -83,14 +89,34 @@ if (form) {
         return `${size.toFixed(decimals)} ${units[unitIndex]}`;
     }
 
-    function getThumbnailUrl(value) {
+    function getThumbnailUrl(value, provider) {
         if (typeof value !== "string" || !value) {
             return null;
         }
 
         try {
             const url = new URL(value);
-            if (url.protocol === "https:" && url.hostname.endsWith(".ytimg.com")) {
+            const allowedHost = provider === "spotify"
+                ? url.hostname === "i.scdn.co"
+                : url.hostname.endsWith(".ytimg.com");
+            if (url.protocol === "https:" && allowedHost) {
+                return url.href;
+            }
+        } catch {
+            return null;
+        }
+
+        return null;
+    }
+
+    function getExternalUrl(value, hostname) {
+        if (typeof value !== "string" || !value) {
+            return null;
+        }
+
+        try {
+            const url = new URL(value);
+            if (url.protocol === "https:" && url.hostname === hostname) {
                 return url.href;
             }
         } catch {
@@ -345,11 +371,13 @@ if (form) {
         }
     }
 
-    function showMetadata(metadata) {
-        currentMetadata = metadata;
+    function showMetadata(provider, metadata) {
+        const isSpotify = provider === "spotify";
+        currentMetadata = isSpotify ? null : metadata;
+        previewProvider.textContent = isSpotify ? "Spotify" : "YouTube";
         title.textContent = metadata.title || "Título indisponível";
 
-        const thumbnailUrl = getThumbnailUrl(metadata.thumbnail);
+        const thumbnailUrl = getThumbnailUrl(metadata.thumbnail, provider);
         thumbnail.hidden = !thumbnailUrl;
         thumbnail.alt = thumbnailUrl ? `Thumbnail de ${title.textContent}` : "";
         if (thumbnailUrl) {
@@ -358,14 +386,43 @@ if (form) {
             thumbnail.removeAttribute("src");
         }
 
+        const artists = Array.isArray(metadata.artists)
+            ? metadata.artists.filter((artist) => typeof artist === "string")
+            : [];
+        const album = typeof metadata.album === "string" ? metadata.album : "";
+        credits.textContent = isSpotify
+            ? [artists.join(", "), album].filter(Boolean).join(" · ")
+            : "";
+        credits.hidden = !isSpotify;
+
         const formattedDuration = formatDuration(metadata.duration);
         duration.textContent = formattedDuration
             ? `Duração: ${formattedDuration}`
             : "Duração indisponível";
 
+        spotifyActions.hidden = !isSpotify;
+        spotifyNotice.hidden = !isSpotify;
+        if (isSpotify) {
+            const spotifyUrl = getExternalUrl(
+                metadata.spotify_url,
+                "open.spotify.com",
+            );
+            const youtubeUrl = getExternalUrl(
+                metadata.youtube_search_url,
+                "www.youtube.com",
+            );
+            if (!spotifyUrl || !youtubeUrl) {
+                throw new Error("O servidor retornou links externos inválidos.");
+            }
+            spotifyPlayLink.href = spotifyUrl;
+            youtubeSearchLink.href = youtubeUrl;
+        }
+
         preview.hidden = false;
-        updateDownloadOptions();
-        downloadForm.hidden = false;
+        if (!isSpotify) {
+            updateDownloadOptions();
+        }
+        downloadForm.hidden = isSpotify;
     }
 
     urlInput.addEventListener("input", () => {
@@ -427,7 +484,7 @@ if (form) {
                 throw new Error("O servidor retornou metadados incompletos.");
             }
 
-            showMetadata(result.metadata);
+            showMetadata(result.provider || "youtube", result.metadata);
             status.textContent = "Conteúdo identificado.";
         } catch (error) {
             errorMessage.textContent = error instanceof Error

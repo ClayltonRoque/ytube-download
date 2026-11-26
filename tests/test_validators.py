@@ -1,6 +1,10 @@
 import pytest
 
-from app.utils.validators import validate_youtube_url
+from app.utils.validators import (
+    is_spotify_url,
+    validate_spotify_track_url,
+    validate_youtube_url,
+)
 
 
 @pytest.mark.parametrize(
@@ -47,3 +51,37 @@ def test_strips_surrounding_whitespace():
 def test_rejects_unsupported_or_malformed_urls(url):
     with pytest.raises(ValueError):
         validate_youtube_url(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://open.spotify.com/track/AbCdEfGhIjKlMnOpQrStUv",
+        "https://open.spotify.com/intl-pt/track/AbCdEfGhIjKlMnOpQrStUv?si=share-token",
+    ],
+)
+def test_accepts_spotify_track_urls_and_returns_track_id(url):
+    assert is_spotify_url(url)
+    assert validate_spotify_track_url(url) == "AbCdEfGhIjKlMnOpQrStUv"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://open.spotify.com/track/AbCdEfGhIjKlMnOpQrStUv",
+        "https://open.spotify.com/album/AbCdEfGhIjKlMnOpQrStUv",
+        "https://open.spotify.com/playlist/AbCdEfGhIjKlMnOpQrStUv",
+        "https://open.spotify.com/track/short",
+        "https://open.spotify.com.evil.example/track/AbCdEfGhIjKlMnOpQrStUv",
+        "https://user@open.spotify.com/track/AbCdEfGhIjKlMnOpQrStUv",
+        "https://open.spotify.com:8443/track/AbCdEfGhIjKlMnOpQrStUv",
+    ],
+)
+def test_rejects_unsupported_spotify_urls(url):
+    with pytest.raises(ValueError):
+        validate_spotify_track_url(url)
+
+
+def test_is_spotify_url_rejects_non_spotify_values():
+    assert not is_spotify_url("https://spotify.com/track/AbCdEfGhIjKlMnOpQrStUv")
+    assert not is_spotify_url("not a URL")

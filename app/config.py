@@ -17,4 +17,6 @@ def load_config():
     return {
         "SECRET_KEY": os.getenv("SECRET_KEY") or None,
         "DOWNLOAD_FOLDER": str(download_folder),
+        "SPOTIFY_CLIENT_ID": os.getenv("SPOTIFY_CLIENT_ID") or None,
+        "SPOTIFY_CLIENT_SECRET": os.getenv("SPOTIFY_CLIENT_SECRET") or None,
     }
