@@ -62,3 +62,17 @@ def download_audio(url: str, download_folder: str | Path) -> dict[str, Any]:
             ],
         },
     )
+
+
+def download_video(url: str, download_folder: str | Path) -> dict[str, Any]:
+    return _execute_download(
+        url,
+        download_folder,
+        {
+            "format": (
+                "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/"
+                "bestvideo+bestaudio/best"
+            ),
+            "merge_output_format": "mp4",
+        },
+    )
