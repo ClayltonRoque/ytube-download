@@ -9,7 +9,7 @@
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500 text-lg font-bold" aria-hidden="true">M</span>
             <span class="text-sm font-semibold tracking-wide">MEDIA<span class="text-violet-300">DOWNLOADER</span></span>
         </a>
-        <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">VERSÃO LOCAL</span>
+        <span class="hidden rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300 sm:inline-flex">VERSÃO LOCAL</span>
     </header>
 
     <main class="mx-auto flex min-h-[calc(100vh-105px)] w-full max-w-6xl items-center justify-center py-12">
@@ -36,13 +36,14 @@
                         type="url"
                         placeholder="https://www.youtube.com/watch?v=..."
                         autocomplete="url"
+                        aria-describedby="metadata-status metadata-error"
                         required
                         class="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600"
                     >
                     <button
                         id="metadata-submit"
                         type="submit"
-                        class="rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-60"
+                        class="w-full rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
                     >
                         Identificar conteúdo
                     </button>
@@ -95,13 +96,15 @@
                 <button
                     id="download-submit"
                     type="submit"
+                    aria-describedby="download-status download-error"
                     class="w-full rounded-xl bg-violet-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
                 >
                     Iniciar download
                 </button>
                 <a
                     id="download-file-link"
-                    class="inline-flex rounded-xl border border-violet-300/30 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/10"
+                    class="inline-flex w-full justify-center rounded-xl border border-violet-300/30 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/10 sm:w-auto"
+                    aria-describedby="download-status"
                     hidden
                 >Baixar arquivo concluído</a>
                 <p id="download-status" class="text-sm text-slate-300" role="status" aria-live="polite"></p>
@@ -110,7 +113,7 @@
                         <span id="download-progress-label">Aguardando progresso...</span>
                         <span id="download-progress-percent"></span>
                     </div>
-                    <progress id="download-progress" class="w-full accent-violet-400" max="100" aria-label="Progresso do download"></progress>
+                    <progress id="download-progress" class="w-full accent-violet-400" max="100" aria-labelledby="download-progress-label"></progress>
                     <p id="download-progress-details" class="text-xs text-slate-400"></p>
                 </div>
                 <p id="download-error" class="text-sm text-rose-300" role="alert" hidden></p>

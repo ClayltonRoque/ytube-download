@@ -181,6 +181,7 @@ if (form) {
         formatSelect.disabled = isBusy;
         qualitySelect.disabled = isBusy || qualityGroup.hidden;
         downloadButton.disabled = isBusy;
+        downloadButton.setAttribute("aria-busy", String(isBusy));
         downloadButton.textContent = isBusy ? "Download em andamento..." : downloadButtonLabel;
         if (isBusy) {
             form.setAttribute("aria-busy", "true");
@@ -253,6 +254,7 @@ if (form) {
             downloadError.hidden = false;
             downloadFileLink.hidden = true;
             downloadFileLink.removeAttribute("href");
+            downloadButton.focus();
         } else {
             downloadButton.hidden = true;
             downloadStatus.textContent = "Download concluído.";
@@ -322,6 +324,7 @@ if (form) {
                 );
                 downloadFileLink.hidden = false;
                 finishDownload();
+                downloadFileLink.focus();
                 return;
             }
             if (task.status === "failed") {
@@ -387,7 +390,8 @@ if (form) {
         resetProgress();
         status.textContent = "Identificando conteúdo...";
         submitButton.disabled = true;
-        submitButton.textContent = "Aguarde...";
+        submitButton.setAttribute("aria-busy", "true");
+        submitButton.textContent = "Consultando conteúdo...";
         urlInput.disabled = true;
         form.setAttribute("aria-busy", "true");
 
@@ -433,6 +437,7 @@ if (form) {
             status.textContent = "";
         } finally {
             submitButton.disabled = false;
+            submitButton.removeAttribute("aria-busy");
             submitButton.textContent = buttonLabel;
             urlInput.disabled = false;
             form.removeAttribute("aria-busy");
