@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.services.downloader import download_audio, download_video
 from app.services.download_tasks import DownloadTaskManager
@@ -13,6 +13,7 @@ from app.utils.validators import (
     validate_video_format,
     validate_youtube_url,
 )
+from app.utils.file_manager import DownloadFileError, resolve_download_file
 
 
 bp = Blueprint("downloads", __name__, url_prefix="/api")
@@ -146,4 +147,39 @@ def download_progress(task_id):
                 "error": task.error,
             },
         }
+    )
+
+
+@bp.get("/download/file/<task_id>")
+def download_file(task_id):
+    task_manager: DownloadTaskManager = current_app.extensions[
+        "download_task_manager"
+    ]
+    task = task_manager.get_task(task_id)
+    if task is None:
+        return _error_response(
+            "task_not_found",
+            "Tarefa de download não encontrada.",
+            404,
+        )
+    if task.status != "completed" or task.future is None:
+        return _error_response(
+            "file_not_ready",
+            "O arquivo ainda não está disponível.",
+            409,
+        )
+
+    download_info = task.future.result()
+    try:
+        file_path = resolve_download_file(
+            download_info,
+            current_app.config["DOWNLOAD_FOLDER"],
+        )
+    except DownloadFileError as exc:
+        return _error_response("file_unavailable", str(exc), 404)
+
+    return send_file(
+        file_path,
+        as_attachment=True,
+        download_name=file_path.name,
     )

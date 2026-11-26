@@ -69,6 +69,7 @@
                 id="download-form"
                 data-endpoint="{{ url_for('downloads.start_download') }}"
                 data-progress-endpoint-template="{{ url_for('downloads.download_progress', task_id='__TASK_ID__') }}"
+                data-file-endpoint-template="{{ url_for('downloads.download_file', task_id='__TASK_ID__') }}"
                 class="mt-6 space-y-4 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left shadow-2xl shadow-violet-950/30 sm:p-6"
                 hidden
             >
@@ -98,6 +99,11 @@
                 >
                     Iniciar download
                 </button>
+                <a
+                    id="download-file-link"
+                    class="inline-flex rounded-xl border border-violet-300/30 px-5 py-3 text-sm font-semibold text-violet-200 transition hover:bg-violet-400/10"
+                    hidden
+                >Baixar arquivo concluído</a>
                 <p id="download-status" class="text-sm text-slate-300" role="status" aria-live="polite"></p>
                 <div id="download-progress-panel" class="space-y-2" hidden>
                     <div class="flex items-center justify-between gap-3 text-xs text-slate-300">

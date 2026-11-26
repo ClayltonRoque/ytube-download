@@ -191,3 +191,61 @@ def test_progress_endpoint_hides_unexpected_failure_details(tmp_path):
         "Não foi possível concluir o download."
     )
     assert "/private/downloads" not in response.get_data(as_text=True)
+
+
+def test_file_endpoint_serves_completed_task_as_attachment(tmp_path):
+    app = create_test_app(tmp_path)
+    output_file = tmp_path / "completed.mp3"
+    output_file.write_bytes(b"audio data")
+    task = app.extensions["download_task_manager"].create_task(
+        lambda progress_hook: {"filepath": str(output_file)}
+    )
+    assert task.future is not None
+    task.future.result(timeout=2)
+
+    response = app.test_client().get(f"/api/download/file/{task.id}")
+
+    assert response.status_code == 200
+    assert response.data == b"audio data"
+    assert response.headers["Content-Disposition"] == (
+        'attachment; filename=completed.mp3'
+    )
+
+
+def test_file_endpoint_rejects_task_that_is_not_completed(tmp_path):
+    app = create_test_app(tmp_path)
+    started = Event()
+    release = Event()
+
+    def wait_for_release(progress_hook):
+        started.set()
+        assert release.wait(timeout=5)
+
+    task = app.extensions["download_task_manager"].create_task(wait_for_release)
+    assert task.future is not None
+    try:
+        assert started.wait(timeout=2)
+        response = app.test_client().get(f"/api/download/file/{task.id}")
+    finally:
+        release.set()
+
+    assert response.status_code == 409
+    assert response.get_json()["error"]["code"] == "file_not_ready"
+
+
+def test_file_endpoint_does_not_serve_files_outside_download_folder(tmp_path):
+    download_folder = tmp_path / "downloads"
+    download_folder.mkdir()
+    app = create_test_app(download_folder)
+    outside_file = tmp_path / "outside.mp4"
+    outside_file.write_bytes(b"secret")
+    task = app.extensions["download_task_manager"].create_task(
+        lambda progress_hook: {"filepath": str(outside_file)}
+    )
+    assert task.future is not None
+    task.future.result(timeout=2)
+
+    response = app.test_client().get(f"/api/download/file/{task.id}")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"]["code"] == "file_unavailable"

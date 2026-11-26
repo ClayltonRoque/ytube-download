@@ -16,6 +16,7 @@ if (form) {
     const qualityLabel = document.querySelector("#quality-label");
     const qualitySelect = document.querySelector("#download-quality");
     const downloadButton = document.querySelector("#download-submit");
+    const downloadFileLink = document.querySelector("#download-file-link");
     const downloadStatus = document.querySelector("#download-status");
     const downloadError = document.querySelector("#download-error");
     const progressPanel = document.querySelector("#download-progress-panel");
@@ -163,6 +164,8 @@ if (form) {
         downloadStatus.textContent = "";
         downloadError.textContent = "";
         downloadError.hidden = true;
+        downloadFileLink.hidden = true;
+        downloadFileLink.removeAttribute("href");
         progressPanel.hidden = true;
         progressLabel.textContent = "Aguardando progresso...";
         progressPercent.textContent = "";
@@ -246,6 +249,8 @@ if (form) {
             downloadStatus.textContent = "O download não foi concluído.";
             downloadError.textContent = errorMessage;
             downloadError.hidden = false;
+            downloadFileLink.hidden = true;
+            downloadFileLink.removeAttribute("href");
         } else {
             downloadStatus.textContent = "Download concluído.";
         }
@@ -308,6 +313,11 @@ if (form) {
                 progressBar.value = 100;
                 progressPercent.textContent = "100%";
                 progressLabel.textContent = "Concluído";
+                downloadFileLink.href = downloadForm.dataset.fileEndpointTemplate.replace(
+                    "__TASK_ID__",
+                    encodeURIComponent(taskId),
+                );
+                downloadFileLink.hidden = false;
                 finishDownload();
                 return;
             }
@@ -437,6 +447,8 @@ if (form) {
 
         downloadError.hidden = true;
         downloadError.textContent = "";
+        downloadFileLink.hidden = true;
+        downloadFileLink.removeAttribute("href");
         downloadStatus.textContent = "Iniciando download...";
         progressPanel.hidden = false;
         progressBar.removeAttribute("value");
