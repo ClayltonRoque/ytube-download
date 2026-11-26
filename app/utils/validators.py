@@ -14,6 +14,9 @@ _YOUTUBE_HOSTS = {
 }
 _VIDEO_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{11}\Z")
 _VIDEO_PATHS = {"embed", "live", "shorts", "v"}
+_AUDIO_FORMATS = {"mp3", "m4a", "flac", "wav", "opus"}
+_MP3_QUALITIES = {128, 192, 320}
+_VIDEO_FORMATS = {"mp4"}
 
 
 def validate_youtube_url(value: str) -> str:
@@ -70,3 +73,71 @@ def validate_youtube_url(value: str) -> str:
         raise ValueError("A URL não contém um ID de vídeo válido do YouTube.")
 
     return url
+
+
+def _parse_quality(value, option_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{option_name} deve ser um número inteiro.")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        return int(value)
+    raise ValueError(f"{option_name} deve ser um número inteiro.")
+
+
+def validate_audio_options(
+    audio_format: str,
+    audio_quality: int | str | None = None,
+) -> tuple[str, int | None]:
+    if not isinstance(audio_format, str):
+        raise ValueError("Formato de áudio inválido.")
+
+    audio_format = audio_format.lower()
+    if audio_format not in _AUDIO_FORMATS:
+        raise ValueError("Formato de áudio não suportado.")
+    if audio_quality is None:
+        return audio_format, None
+    if audio_format != "mp3":
+        raise ValueError("A seleção de bitrate está disponível apenas para MP3.")
+
+    quality = _parse_quality(audio_quality, "Bitrate MP3")
+    if quality not in _MP3_QUALITIES:
+        raise ValueError("Bitrate MP3 deve ser 128, 192 ou 320 kbps.")
+
+    return audio_format, quality
+
+
+def validate_video_format(video_format: str) -> str:
+    if not isinstance(video_format, str) or video_format.lower() not in _VIDEO_FORMATS:
+        raise ValueError("Formato de vídeo não suportado.")
+    return video_format.lower()
+
+
+def parse_video_quality(video_quality: int | str | None) -> int | None:
+    if video_quality is None:
+        return None
+    if isinstance(video_quality, str) and video_quality.lower() in {"auto", "best"}:
+        return None
+
+    return _parse_quality(video_quality, "Resolução de vídeo")
+
+
+def validate_video_quality(
+    video_quality: int | str | None,
+    available_formats: list[dict],
+) -> int | None:
+    quality = parse_video_quality(video_quality)
+    if quality is None:
+        return None
+    if not isinstance(available_formats, list):
+        available_formats = []
+    has_video_quality = any(
+        isinstance(video_format, dict)
+        and video_format.get("height") == quality
+        and video_format.get("vcodec") not in (None, "none")
+        for video_format in available_formats
+    )
+    if not has_video_quality:
+        raise ValueError("A resolução selecionada não está disponível neste vídeo.")
+
+    return quality
