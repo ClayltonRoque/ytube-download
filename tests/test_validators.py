@@ -2,6 +2,7 @@ import pytest
 
 from app.utils.validators import (
     is_spotify_url,
+    is_youtube_playlist_url,
     validate_spotify_track_url,
     validate_youtube_url,
 )
@@ -33,6 +34,19 @@ def test_strips_surrounding_whitespace():
 @pytest.mark.parametrize(
     "url",
     [
+        "https://www.youtube.com/playlist?list=PLabc_123",
+        "https://www.youtube.com/watch?v=AbC123_456-&list=PLabc_123",
+        "https://youtu.be/AbC123_456-?list=PLabc_123",
+    ],
+)
+def test_accepts_playlist_urls(url):
+    assert validate_youtube_url(url) == url
+    assert is_youtube_playlist_url(url)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
         "",
         None,
         "https://example.com/watch?v=AbC123_456-",
@@ -42,9 +56,9 @@ def test_strips_surrounding_whitespace():
         "https://youtube.com:8443/watch?v=AbC123_456-",
         "https://youtube.com/watch",
         "https://youtube.com/watch?v=short",
-        "https://youtube.com/playlist?list=PL123",
-        "https://youtube.com/watch?v=AbC123_456-&list=PL123",
-        "https://youtu.be/AbC123_456-?list=PL123",
+        "https://youtube.com/playlist",
+        "https://youtube.com/playlist?list=",
+        "https://youtube.com/playlist?list=abc&list=def",
         "https://youtube-nocookie.com/shorts/AbC123_456-",
     ],
 )

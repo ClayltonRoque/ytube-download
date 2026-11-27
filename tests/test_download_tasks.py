@@ -87,6 +87,40 @@ def test_download_task_marks_finished_progress_as_complete():
     assert task_manager.get_task(task.id).progress["percentage"] == 100.0
 
 
+def test_playlist_progress_uses_completed_items_not_file_bytes():
+    task_manager = DownloadTaskManager()
+
+    def report_progress(progress_hook):
+        progress_hook(
+            {
+                "is_playlist": True,
+                "status": "downloading",
+                "playlist_index": 3,
+                "playlist_count": 9,
+                "title": "Third song",
+                "downloaded_bytes": 999,
+                "total_bytes": 1000,
+            }
+        )
+
+    task = task_manager.create_task(report_progress)
+    assert task.future is not None
+    task.future.result(timeout=2)
+
+    assert task_manager.get_task(task.id).progress == {
+        "is_playlist": True,
+        "status": "downloading",
+        "playlist_index": 3,
+        "playlist_count": 9,
+        "title": "Third song",
+        "downloaded_bytes": None,
+        "total_bytes": None,
+        "percentage": (2 / 9) * 100,
+        "speed": None,
+        "eta": None,
+    }
+
+
 def test_download_task_ids_are_unique():
     task_manager = DownloadTaskManager()
 

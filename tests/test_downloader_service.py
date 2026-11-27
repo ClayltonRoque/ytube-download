@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from zipfile import ZipFile
 
 import pytest
 from yt_dlp.utils import DownloadError
@@ -7,6 +8,7 @@ from app.services.downloader import (
     MediaDownloadError,
     download_audio,
     download_media,
+    download_playlist,
     download_video,
 )
 
@@ -255,3 +257,70 @@ def test_download_video_rejects_unsupported_format_before_query(tmp_path):
 
     youtube_dl_class.assert_not_called()
     get_video_info.assert_not_called()
+
+
+def test_download_playlist_saves_tracks_in_folder_and_returns_zip(tmp_path):
+    playlist_url = "https://www.youtube.com/playlist?list=PLabc_123"
+    playlist_folder = tmp_path / "downloads" / "Favorite Songs"
+    progress_events = []
+    with (
+        patch(
+            "app.services.downloader.get_video_info",
+            return_value={
+                "_type": "playlist",
+                "title": "Favorite Songs",
+                "entries": [{"id": "one"}, {"id": "two"}],
+            },
+        ),
+        patch("app.services.downloader.YoutubeDL") as youtube_dl_class,
+    ):
+        youtube_dl = youtube_dl_class.return_value.__enter__.return_value
+
+        def download_playlist_files(url, download):
+            assert url == playlist_url
+            assert download is True
+            options = youtube_dl_class.call_args.args[0]
+            options["progress_hooks"][0](
+                {
+                    "status": "downloading",
+                    "info_dict": {
+                        "playlist_index": 3,
+                        "playlist_count": 9,
+                        "title": "Third song",
+                    },
+                }
+            )
+            playlist_folder.mkdir(parents=True, exist_ok=True)
+            (playlist_folder / "one.mp3").write_bytes(b"one")
+            (playlist_folder / "two.mp3").write_bytes(b"two")
+            return {"_type": "playlist", "title": "Favorite Songs"}
+
+        youtube_dl.extract_info.side_effect = download_playlist_files
+        result = download_playlist(
+            playlist_url,
+            tmp_path / "downloads",
+            progress_hook=progress_events.append,
+        )
+
+    assert result == {
+        "filepath": str(tmp_path / "downloads" / "Favorite Songs.zip"),
+        "title": "Favorite Songs",
+        "ext": "zip",
+    }
+    options = youtube_dl_class.call_args.args[0]
+    assert options["noplaylist"] is False
+    assert options["outtmpl"] == str(
+        playlist_folder / "%(title)s [%(id)s].%(ext)s"
+    )
+    assert progress_events == [
+        {
+            "is_playlist": True,
+            "status": "downloading",
+            "playlist_index": 3,
+            "playlist_count": 9,
+            "title": "Third song",
+        }
+    ]
+    with ZipFile(result["filepath"]) as archive:
+        assert archive.namelist() == ["one.mp3", "two.mp3"]
+        assert archive.read("one.mp3") == b"one"

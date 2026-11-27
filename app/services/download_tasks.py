@@ -92,6 +92,37 @@ class DownloadTaskManager:
         if not isinstance(status, str):
             status = "unknown"
 
+        if info.get("is_playlist") is True:
+            playlist_index = self._positive_integer(info.get("playlist_index"))
+            playlist_count = self._positive_integer(info.get("playlist_count"))
+            percentage = None
+            if playlist_index is not None and playlist_count is not None:
+                completed_count = playlist_index
+                if status != "finished":
+                    completed_count -= 1
+                percentage = min(
+                    100.0,
+                    max(0.0, completed_count / playlist_count * 100),
+                )
+
+            title = info.get("title")
+            self._update_progress(
+                task_id,
+                {
+                    "is_playlist": True,
+                    "status": status,
+                    "playlist_index": playlist_index,
+                    "playlist_count": playlist_count,
+                    "title": title if isinstance(title, str) else None,
+                    "downloaded_bytes": None,
+                    "total_bytes": None,
+                    "percentage": percentage,
+                    "speed": None,
+                    "eta": None,
+                },
+            )
+            return
+
         downloaded_bytes = self._number(info.get("downloaded_bytes"))
         total_bytes = self._number(info.get("total_bytes")) or self._number(
             info.get("total_bytes_estimate")
@@ -113,6 +144,13 @@ class DownloadTaskManager:
                 "eta": self._number(info.get("eta")),
             },
         )
+
+    @classmethod
+    def _positive_integer(cls, value: Any) -> int | None:
+        number = cls._number(value)
+        if isinstance(number, int) and number > 0:
+            return number
+        return None
 
     @staticmethod
     def _number(value: Any) -> int | float | None:

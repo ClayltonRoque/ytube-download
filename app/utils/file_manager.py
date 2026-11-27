@@ -19,6 +19,7 @@ _DOWNLOAD_EXTENSIONS = {
     "m4v",
     "3gp",
     "ts",
+    "zip",
 }
 
 

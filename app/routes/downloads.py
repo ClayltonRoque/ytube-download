@@ -2,7 +2,12 @@ import re
 
 from flask import Blueprint, current_app, jsonify, request, send_file
 
-from app.services.downloader import download_audio, download_spotify_audio, download_video
+from app.services.downloader import (
+    download_audio,
+    download_playlist,
+    download_spotify_audio,
+    download_video,
+)
 from app.services.download_tasks import DownloadTaskManager
 from app.services.fetchtune_metadata import (
     FetchTuneMetadataError,
@@ -15,6 +20,7 @@ from app.services.youtube import (
 )
 from app.utils.validators import (
     is_spotify_url,
+    is_youtube_playlist_url,
     parse_video_quality,
     validate_audio_options,
     validate_spotify_track_url,
@@ -145,12 +151,21 @@ def start_download():
         except ValueError as exc:
             return _error_response("invalid_options", str(exc), 400)
 
-        download_function = download_audio
-        download_args = (url,)
-        download_options = {
-            "audio_format": audio_format,
-            "audio_quality": audio_quality,
-        }
+        if is_youtube_playlist_url(url):
+            download_function = download_playlist
+            download_args = (url,)
+            download_options = {
+                "media_type": "audio",
+                "audio_format": audio_format,
+                "audio_quality": audio_quality,
+            }
+        else:
+            download_function = download_audio
+            download_args = (url,)
+            download_options = {
+                "audio_format": audio_format,
+                "audio_quality": audio_quality,
+            }
     elif media_type == "video":
         try:
             video_format = validate_video_format(data.get("format", "mp4"))
@@ -158,12 +173,21 @@ def start_download():
         except ValueError as exc:
             return _error_response("invalid_options", str(exc), 400)
 
-        download_function = download_video
-        download_args = (url,)
-        download_options = {
-            "video_format": video_format,
-            "video_quality": video_quality,
-        }
+        if is_youtube_playlist_url(url):
+            download_function = download_playlist
+            download_args = (url,)
+            download_options = {
+                "media_type": "video",
+                "video_format": video_format,
+                "video_quality": video_quality,
+            }
+        else:
+            download_function = download_video
+            download_args = (url,)
+            download_options = {
+                "video_format": video_format,
+                "video_quality": video_quality,
+            }
     else:
         return _error_response(
             "invalid_media_type",

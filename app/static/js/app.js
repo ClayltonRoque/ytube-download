@@ -10,7 +10,11 @@ if (form) {
     const previewProvider = document.querySelector("#preview-provider");
     const title = document.querySelector("#preview-title");
     const credits = document.querySelector("#preview-credits");
+    const playlistInfo = document.querySelector("#preview-playlist");
     const duration = document.querySelector("#preview-duration");
+    const playlistDownloadNotice = document.querySelector(
+        "#playlist-download-notice",
+    );
     const spotifyActions = document.querySelector("#spotify-actions");
     const spotifyPlayLink = document.querySelector("#spotify-play-link");
     const youtubeSearchLink = document.querySelector("#youtube-search-link");
@@ -233,6 +237,25 @@ if (form) {
             progressLabel.textContent = "Falhou";
         } else if (task.status === "completed") {
             progressLabel.textContent = "Concluído";
+        } else if (progress?.is_playlist === true) {
+            const itemIndex = Number.isInteger(progress.playlist_index)
+                ? progress.playlist_index
+                : null;
+            const itemCount = Number.isInteger(progress.playlist_count)
+                ? progress.playlist_count
+                : null;
+            const itemTitle = typeof progress.title === "string"
+                ? progress.title.trim()
+                : "";
+            if (itemIndex !== null && itemCount !== null) {
+                progressLabel.textContent = `Baixando ${itemIndex} de ${itemCount}${
+                    itemTitle ? `: ${itemTitle}` : ""
+                }`;
+            } else {
+                progressLabel.textContent = itemTitle
+                    ? `Baixando: ${itemTitle}`
+                    : "Baixando playlist...";
+            }
         } else if (progress?.status === "finished") {
             progressLabel.textContent = "Processando arquivo...";
         } else {
@@ -249,6 +272,10 @@ if (form) {
         }
 
         const details = [];
+        if (progress?.is_playlist === true) {
+            progressDetails.textContent = "";
+            return;
+        }
         const downloaded = formatBytes(progress?.downloaded_bytes);
         const total = formatBytes(progress?.total_bytes);
         const speed = formatBytes(progress?.speed);
@@ -376,8 +403,13 @@ if (form) {
 
     function showMetadata(provider, metadata) {
         const isSpotify = provider === "spotify";
+        const isPlaylist = provider === "youtube" && metadata.is_playlist === true;
         currentMetadata = metadata;
-        previewProvider.textContent = isSpotify ? "Spotify" : "YouTube";
+        previewProvider.textContent = isSpotify
+            ? "Spotify"
+            : isPlaylist
+                ? "Playlist do YouTube"
+                : "YouTube";
         title.textContent = metadata.title || "Título indisponível";
 
         const thumbnailUrl = getThumbnailUrl(metadata.thumbnail, provider);
@@ -398,10 +430,22 @@ if (form) {
             : "";
         credits.hidden = !isSpotify || !credits.textContent;
 
+        const itemCount = Number.isInteger(metadata.item_count)
+            ? metadata.item_count
+            : null;
+        playlistInfo.textContent = !isPlaylist
+            ? ""
+            : itemCount === null
+                ? "Número de itens indisponível"
+                : `${itemCount} ${itemCount === 1 ? "item" : "itens"}`;
+        playlistInfo.hidden = !isPlaylist;
+
         const formattedDuration = formatDuration(metadata.duration);
-        duration.textContent = formattedDuration
-            ? `Duração: ${formattedDuration}`
-            : "Duração indisponível";
+        duration.textContent = isPlaylist
+            ? "Os arquivos serão entregues em um ZIP."
+            : formattedDuration
+                ? `Duração: ${formattedDuration}`
+                : "Duração indisponível";
 
         spotifyActions.hidden = !isSpotify;
         spotifyNotice.hidden = !isSpotify;
@@ -421,6 +465,7 @@ if (form) {
             updateDownloadOptions();
         }
         downloadForm.hidden = false;
+        playlistDownloadNotice.hidden = !isPlaylist;
         mediaTypeGroup.hidden = isSpotify;
         if (isSpotify) {
             mediaTypeSelect.value = "audio";

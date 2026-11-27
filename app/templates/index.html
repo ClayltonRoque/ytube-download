@@ -34,7 +34,7 @@
                         id="media-url"
                         name="url"
                         type="url"
-                        placeholder="URL de vídeo do YouTube ou faixa do Spotify"
+                        placeholder="URL de vídeo/playlist do YouTube ou faixa do Spotify"
                         autocomplete="url"
                         aria-describedby="metadata-status metadata-error"
                         required
@@ -63,6 +63,7 @@
                     <p id="preview-provider" class="text-xs font-semibold uppercase tracking-wider text-violet-300"></p>
                     <h2 id="preview-title" class="mt-2 text-xl font-semibold text-white"></h2>
                     <p id="preview-credits" class="mt-2 text-sm text-slate-300" hidden></p>
+                    <p id="preview-playlist" class="mt-2 text-sm text-violet-200" hidden></p>
                     <p id="preview-duration" class="mt-2 text-sm text-slate-400"></p>
                     <div id="spotify-actions" class="mt-4 flex flex-col gap-3 sm:flex-row" hidden>
                         <a
@@ -92,6 +93,9 @@
                 hidden
             >
                 <h2 class="text-lg font-semibold text-white">Opções de download</h2>
+                <p id="playlist-download-notice" class="text-sm text-slate-300" hidden>
+                    Os itens da playlist serão salvos em uma pasta e reunidos em um arquivo ZIP.
+                </p>
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div>
                         <label for="media-type" class="mb-2 block text-sm font-medium text-slate-200">Tipo de mídia</label>

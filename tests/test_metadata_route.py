@@ -66,6 +66,27 @@ def test_metadata_endpoint_returns_service_result(get_video_info):
     get_video_info.assert_called_once_with(VIDEO_URL)
 
 
+@patch("app.routes.downloads.get_video_info")
+def test_metadata_endpoint_returns_playlist_metadata(get_video_info):
+    playlist_url = "https://www.youtube.com/playlist?list=PLabc_123"
+    get_video_info.return_value = {
+        "_type": "playlist",
+        "title": "Favorites",
+        "entries": [{"id": "one"}, {"id": "two"}],
+    }
+
+    response = create_client().post("/api/metadata", json={"url": playlist_url})
+
+    assert response.status_code == 200
+    assert response.get_json()["metadata"] == {
+        "title": "Favorites",
+        "thumbnail": None,
+        "item_count": 2,
+        "is_playlist": True,
+        "formats": [],
+    }
+
+
 def test_metadata_endpoint_requires_json_object():
     response = create_client().post(
         "/api/metadata", data="not json", content_type="text/plain"

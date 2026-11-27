@@ -29,6 +29,18 @@ def test_resolve_download_file_accepts_relative_filename(tmp_path):
     ) == output_file.resolve()
 
 
+def test_resolve_download_file_accepts_zip_archives(tmp_path):
+    download_folder = tmp_path / "downloads"
+    download_folder.mkdir()
+    output_file = download_folder / "Favorites.zip"
+    output_file.write_bytes(b"archive")
+
+    assert resolve_download_file(
+        {"filepath": str(output_file), "ext": "zip"},
+        download_folder,
+    ) == output_file.resolve()
+
+
 def test_resolve_download_file_falls_back_to_video_id_and_final_extension(
     tmp_path,
 ):

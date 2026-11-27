@@ -15,6 +15,7 @@ _YOUTUBE_HOSTS = {
 _SPOTIFY_HOSTS = {"open.spotify.com"}
 _SPOTIFY_TRACK_ID_PATTERN = re.compile(r"[A-Za-z0-9]{22}\Z")
 _VIDEO_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{11}\Z")
+_PLAYLIST_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,128}\Z")
 _VIDEO_PATHS = {"embed", "live", "shorts", "v"}
 _AUDIO_FORMATS = {"mp3", "m4a", "flac", "wav", "opus"}
 _MP3_QUALITIES = {128, 192, 320}
@@ -103,12 +104,20 @@ def validate_youtube_url(value: str) -> str:
         raise ValueError("A URL contém uma porta não permitida.")
 
     query = parse_qs(parsed.query, keep_blank_values=True)
-    if "list" in query:
-        raise ValueError("URLs de playlists ainda não são suportadas.")
+    playlist_ids = query.get("list", [])
+    if playlist_ids and (
+        len(playlist_ids) != 1
+        or _PLAYLIST_ID_PATTERN.fullmatch(playlist_ids[0]) is None
+    ):
+        raise ValueError("A URL não contém um ID de playlist válido do YouTube.")
 
     video_id = None
     path_segments = [segment for segment in parsed.path.split("/") if segment]
 
+    if parsed.path.rstrip("/") == "/playlist":
+        if not playlist_ids:
+            raise ValueError("A URL não contém um ID de playlist válido do YouTube.")
+        return url
     if hostname.endswith("youtu.be"):
         if len(path_segments) == 1:
             video_id = path_segments[0]
@@ -127,6 +136,15 @@ def validate_youtube_url(value: str) -> str:
         raise ValueError("A URL não contém um ID de vídeo válido do YouTube.")
 
     return url
+
+
+def is_youtube_playlist_url(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        return bool(parse_qs(urlsplit(value).query, keep_blank_values=True).get("list"))
+    except ValueError:
+        return False
 
 
 def _parse_quality(value, option_name: str) -> int:

@@ -84,6 +84,32 @@ def test_download_endpoint_creates_video_task(download_video, tmp_path):
     )
 
 
+@patch("app.routes.downloads.download_playlist", return_value={"ext": "zip"})
+def test_download_endpoint_creates_playlist_task(download_playlist, tmp_path):
+    app = create_test_app(tmp_path)
+    playlist_url = "https://www.youtube.com/playlist?list=PLabc_123"
+
+    response = app.test_client().post(
+        "/api/download",
+        json={"url": playlist_url, "media_type": "audio"},
+    )
+
+    assert response.status_code == 202
+    task = app.extensions["download_task_manager"].get_task(
+        response.get_json()["task"]["id"]
+    )
+    assert task is not None and task.future is not None
+    task.future.result(timeout=2)
+    download_playlist.assert_called_once_with(
+        playlist_url,
+        str(tmp_path),
+        media_type="audio",
+        audio_format="mp3",
+        audio_quality=None,
+        progress_hook=ANY,
+    )
+
+
 @patch("app.routes.downloads.download_audio")
 def test_download_endpoint_rejects_invalid_options_without_scheduling(
     download_audio, tmp_path
